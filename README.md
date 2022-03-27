@@ -11,5 +11,5 @@ PS: 让CRUD回归简单 by lo106258
 # 其他
 ```
 你可以关注我更多产品：
-- [quickjava](quickgroup/quickjava)
+- [`quickjava`](https://github.com/quickgroup/quickjava)
 ```
