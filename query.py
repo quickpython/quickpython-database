@@ -161,7 +161,7 @@ class QuerySet(object):
         if where is None:
             return self
         if typeof(where) == 'dict':
-            self.__map.append({'key': where.get('key'), 'val': format_val(where.get('val')), 'type': where.get('type')})
+            self.__map.append({'key': where.get('key'), 'type': where.get('type'), 'val': format_val(where.get('val'))})
 
         if typeof(where) == 'list':
             for item in where:
@@ -292,6 +292,7 @@ class QuerySet(object):
         if sql is None:
             return None
 
+        sql = "{}".format(sql)
         logger.debug(sql)
         count, result = self.__conn.execute(sql)
         if count == 0 or result is None:
@@ -307,14 +308,13 @@ class QuerySet(object):
         if self.__name is None:
             return
 
-        column = self.__getField()
-
         sql = self.__comQuerySql()
         if sql is None:
             return None
 
         count, result = self.__conn.execute_all(sql)
         data = []
+        column = self.__getField()
         sp = column.split(',')
         for index, item in enumerate(result):
             dicts = {}

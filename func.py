@@ -1,6 +1,7 @@
 """
     助手方法
 """
+import importlib
 from inspect import isfunction
 
 
@@ -18,3 +19,11 @@ def empty(obj):
 
 def not_empty(obj):
     return empty(obj) is False
+
+
+def load_cls(cls_path, **kwargs):
+    model_path, cls_name = cls_path.rsplit(".", 1)
+    module = importlib.import_module(model_path)
+    cls = getattr(module, cls_name)
+    return cls
+

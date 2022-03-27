@@ -25,7 +25,7 @@ class ColumnCmp:
         return str(self.__dict__())
 
     def __dict__(self):
-        ret = {'key': self.column.name, 'val': self.val, 'type': '='}
+        ret = {'key': self.column.name, 'type': '=', 'val': self.val}
         if self.eq == 'gt': ret['type'] = '>'
         if self.eq == 'ge': ret['type'] = '>='
         if self.eq == 'lt': ret['type'] = '<'
@@ -106,11 +106,11 @@ class ColumnBase:
     def __ne__(self, other):    # 不等：!=
         return ColumnCmp(self, 'ne', other)
 
-    def __str__(self):
-        return self.value if isinstance(self.value, str) else str(self.value)
-
-    def __int__(self):
-        return self.value if isinstance(self.value, int) else int(self.value)
+    # def __str__(self):
+    #     return self.value if isinstance(self.value, str) else str(self.value)
+    #
+    # def __int__(self):
+    #     return self.value if isinstance(self.value, int) else int(self.value)
 
 
 class Int(ColumnBase):
@@ -175,4 +175,3 @@ class ColumnFunc:
 
 def iscolumn(cls):
     return issubclass(cls, ColumnBase)
-
