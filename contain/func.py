@@ -2,11 +2,14 @@
     助手方法
 """
 import importlib
+import types
 from inspect import isfunction
 
 
 def empty(obj):
-    if isinstance(obj, int) and obj == 0:
+    if obj is None:
+        return True
+    elif isinstance(obj, int) and obj == 0:
         return True
     elif isinstance(obj, str) and len(obj) == 0:
         return True
@@ -14,7 +17,7 @@ def empty(obj):
         return True
     elif isinstance(obj, dict) and len(obj) == 0:
         return True
-    return obj is None
+    return False
 
 
 def not_empty(obj):

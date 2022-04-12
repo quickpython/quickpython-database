@@ -1,15 +1,10 @@
 """
     定义模型数据类型
 """
-from .func import *
-from . import setttings
+from ..contain.func import *
+from .. import setttings
 
-
-class JoinType(str):
-    """Join方式"""
-    INNER = 'INNER'
-    LEFT = 'LEFT'
-    RIGHT = 'RIGHT'
+options = setttings.DATABASES['default']['options']
 
 
 class ColumnCmp:
@@ -50,15 +45,21 @@ class ColumnBase:
         self.insert_default = kwargs.pop("insert_default", None)
         self.update_default = kwargs.pop("update_default", None)
 
-        self.comment = kwargs.pop("comment", None)
+        self.comment = kwargs.pop("comment", None)  # 字段备注
         self.proxies = kwargs.pop("proxies", None)  # 字段前缀
 
         self.value = kwargs.pop("value", self.default)   # 字段数据
 
-    def __is_set_default__(self):
+    def has_insert_default(self):
         return (
             self.default is not None
             or self.insert_default is not None
+            or self.update_default is not None
+        )
+
+    def has_update_default(self):
+        return (
+            self.default is not None
             or self.update_default is not None
         )
 
@@ -80,7 +81,7 @@ class ColumnBase:
         return val
 
     def __get_update_default__(self):
-        val = None
+        val = self.default
         if empty(val) and not_empty(self.update_default):
             if isfunction(self.update_default):
                 val = self.update_default()
@@ -125,6 +126,10 @@ class Bigint(ColumnBase):
     type_ = 'bigint'
 
 
+class Float(ColumnBase):
+    type_ = 'float'
+
+
 class Decimal(ColumnBase):
     type_ = 'decimal'
 
@@ -135,6 +140,10 @@ class Char(ColumnBase):
 
 class Varchar(ColumnBase):
     type_ = 'varchar'
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.length = kwargs.pop("length")
 
 
 class Text(ColumnBase):
@@ -157,8 +166,23 @@ class Enum(ColumnBase):
     type_ = 'enum'
 
 
+field_map = {
+    Int.type_: Int,
+    Tinyint.type_: Tinyint,
+    Bigint.type_: Bigint,
+    Float.type_: Float,
+    Decimal.type_: Decimal,
+    Char.type_: Char,
+    Varchar.type_: Varchar,
+    Text.type_: Text,
+    Datetime.type_: Datetime,
+    Date.type_: Date,
+    Time.type_: Time,
+}
+
+
 """
-    扩展方法
+    字段扩展方法
 """
 
 
@@ -168,8 +192,8 @@ class ColumnFunc:
     def now():
         import datetime
         fmt = "%Y-%m-%d %H:%M:%S"
-        if hasattr(setttings, 'datetime_fmt') and not_empty(setttings.datetime_fmt):
-            fmt = setttings.datetime_fmt
+        if hasattr(options, 'datetime_fmt') and not_empty(options['datetime_fmt']):
+            fmt = options['datetime_fmt']
         return datetime.datetime.now().strftime(fmt)
 
 
