@@ -4,7 +4,7 @@
 
 import logging, copy
 from .query import QuerySet
-from .contain.columns import ColumnCmp, iscolumn
+from .contain.columns import ColumnCmp, iscolumn, ModelAttr
 from .contain.func import *
 
 
@@ -41,10 +41,10 @@ class Model:
                 cls_attr = object.__getattribute__(self.__class__, key)
                 setattr(self, key, copy.copy(cls_attr))
         # 查询器
+        # self.__query = QuerySet().table(self.__table__)   # 基础查询构造器
         self.__query__ = QuerySet().table(self.__table__)
 
     def _load_field(self):
-        """加载变量名称"""
         self.__class__._get_cls_fields()
 
     @property
@@ -102,7 +102,9 @@ class Model:
         self.__query__ = self.__query__.where(where['key'], where['type'], where['val'])
         return self
 
-    def get(self):
+    def get(self, *args, **kwargs):
+        if not args or not kwargs:
+            self.where(*args, **kwargs)
         return self.find()
 
     def find(self):
@@ -263,6 +265,7 @@ class Model:
 
     def __getattr__(self, name):
         # 在model上未找到的属性，到
+        # print("在model上未找到的属性", name)
         if hasattr(self.__query__, name):
 
             def proxy_method(*args, **kwargs):
@@ -279,18 +282,18 @@ class Model:
         # raise Exception("未在模型对象{}上找到名为'{}'的属性或方法".format(self.name, name))
         return None
 
-    def __getattribute__(self, property_name, attr_direct=False):
-        attr = object.__getattribute__(self, property_name)
-        # logger.debug("__getattribute__ {}=>{}:{}".format(property_name, type(attr), attr))
+    def __getattribute__(self, attr_name, attr_direct=False):
+        attr = object.__getattribute__(self, attr_name)
+        if attr_name.find("_") == 0 or attr_direct:     # 自带属性直接返回
+            return attr
+        if isinstance(attr, types.MethodType):              # 方法直接返回
+            return attr
 
-        if property_name.find("_") == 0 or attr_direct:
-            return attr
-        if isinstance(attr, types.MethodType):
-            return attr
+        # logger.debug("{}=>{}:{}".format(property_name, type(attr), attr))
 
         # 下级属性是关联模型
         self.__relation_load_data()
-        attr = object.__getattribute__(self, property_name)
+        attr = object.__getattribute__(self, attr_name)
 
         if iscolumn(attr.__class__):
             return attr.value
@@ -299,7 +302,7 @@ class Model:
             # logger.debug("关联模型属性")
             attr.load_model_cls(self)
             attr.bind_parent_where()
-            object.__setattr__(self, property_name, attr.model)
+            object.__setattr__(self, attr_name, attr.model)
             # logger.debug("关联模型属性 返回新的模型={}".format(id(attr.model)))
             # logger.debug("关联模型属性 返回新的模型={}".format(type(attr.model)))
             # logger.debug("关联模型属性 返回新的模型={}".format(attr.model.__relation__))

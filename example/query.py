@@ -3,7 +3,7 @@ query_set
 """
 import logging
 from libs.utils import Utils
-from quickpython.database.query import QuerySet
+from quickpython.database.query import QuerySet, Db
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -14,7 +14,7 @@ class QuerySetDemo:
     def call(self):
         # self.base()
         # self.join()
-        self.extend()
+        self.trans()
 
     def base(self):
         self.insert()
@@ -80,6 +80,19 @@ class QuerySetDemo:
             .find()
         logger.info("查询一对多={}:{}".format(len(ret_2), ret_2))
         Utils.print_dicts(ret_2)
+
+    def trans(self):
+        """测试事务操作"""
+        Db.start_trans()
+        try:
+            Db().table("user").where('id', 40830).find()
+            Db().table("user").where('id', 40830).update({'xx_token': Utils.datetime_now()})
+            raise Exception("test")
+            Db.commit()
+
+        except BaseException as e:
+            Db.rollback()
+            logger.error("出现异常", e)
 
     def extend(self):
         for it in range(5):

@@ -5,7 +5,6 @@ import logging
 from libs.utils import Utils
 from quickpython.database.contain.columns import *
 from quickpython.database.connector.connection import Connection
-from quickpython.component.env import env
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,6 @@ class GenerateDemo:
         conn = Connection().connect()
         # 获取全部表
         count, ret, field_info = conn.execute_all("SHOW TABLES")
-        prefix = conn.get_config('prefix')
         table_dict = {it[0]: {} for it in ret}
         # 获取表的字段属性
         for table in table_dict:
@@ -45,11 +43,11 @@ class GenerateDemo:
         # 格式化输出
         ret = []
         for it in table_dict:
-            ret.append(self.format_table(it, table_dict[it], prefix))
+            ret.append(self.format_table(it, table_dict[it]))
 
         print("\n\n\n".join(ret))
 
-    def format_table(self, table_name, fields, prefix):
+    def format_table(self, table_name, fields):
         """"""
         field_arr = []
         for key in fields:
@@ -59,14 +57,11 @@ class GenerateDemo:
                 args.append("primary_key=True")
             if len(it['comment']) > 0:
                 args.append("comment=\"{}\"".format(it['comment']))
-
-            item = "{} = {}({})".format(it['name'], it['type_cls'].__name__, ", ".join(args))
+            item = "{} = {}({})".format(it['name'], it['type_cls'].__table__, ", ".join(args))
             field_arr.append(item)
 
-        model_name = table_name if prefix == '' else table_name.replace(prefix, '')
-        model_name = Utils.str_to_hump(model_name)
-
         t_ = "    "
+        model_name = Utils.str_to_hump(table_name)
         text = """class {}Model(Model):\n{}__table__ = "{}"\n\n{}{}"""\
             .format(model_name, t_, table_name, t_, "\n    ".join(field_arr))
         return text

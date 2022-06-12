@@ -8,7 +8,7 @@ from libs.utils import Utils
 logger = logging.getLogger(__name__)
 
 
-class ModelDemo:
+class DemoModel:
 
     def call(self):
         """"""
@@ -120,6 +120,6 @@ class ModelDemo:
 
 if __name__ == '__main__':
     try:
-        ModelDemo().call()
+        DemoModel().call()
     except:
         Utils.print_exc()

@@ -199,3 +199,18 @@ class ColumnFunc:
 
 def iscolumn(cls):
     return issubclass(cls, ColumnBase)
+
+
+"""
+    模型忽略属性名称
+    模型处理时，直接返回值
+    暂时不用，只要属性带下划线_就是自带属性，直接返回
+"""
+ModelAttr = [
+    "__class__",
+    "__modified_fields__",
+    "__table__",
+    "__withs__",
+    "__query__",
+    "__attrs__",
+]

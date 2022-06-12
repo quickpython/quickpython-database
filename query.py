@@ -56,11 +56,9 @@ def typeof(variate):
 class QuerySet(object):
 
     def __init__(self):
-        self.__conn = Connection.get_connect()
         self.__map = {}
-        self.__database = self.__conn.options['database']
+        self.__database = self.__conn.config['database']
         self.__table = ''
-        self.__name = ''
         self.__fields = []
         self.__where = {}
         self.__alias = ''
@@ -72,7 +70,11 @@ class QuerySet(object):
             'multi': {},
             'where': {},
         }
-        self.prefix = self.__conn.options['prefix']
+        self.prefix = self.__conn.get_config("prefix", '')
+
+    @property
+    def __conn(self):
+        return Connection.get_connect()
 
     def __close(self):
         self.__conn.close()
@@ -81,9 +83,13 @@ class QuerySet(object):
     def __self(self):
         return self if self.__model__ is None else self.__model__
 
+    @property
+    def __table__(self):
+        """完整表名（带前缀）"""
+        return self.__table if self.prefix is None else self.prefix + self.__table
+
     def table(self, table):
         self.__table = table
-        self.__name = self.prefix + table
         return self
 
     def where(self, field, op=None, condition=None):
@@ -166,10 +172,10 @@ class QuerySet(object):
             return arr      # 用的排除
 
         if field is True:
-            fields = self.__get_column__(list, self.__table if table_name is None else table_name)
+            fields = self.__get_column__(list, self.__table__ if table_name is None else table_name)
             field = ['*'] if fields is None else fields
         elif is_except:
-            fields = self.__get_column__(list, self.__table if table_name is None else table_name)
+            fields = self.__get_column__(list, self.__table__ if table_name is None else table_name)
             field = field if fields is None else array_diff(fields, field)
 
         if not_empty(table_name):
@@ -248,7 +254,7 @@ class QuerySet(object):
 
     def __com_query_sql(self):
         """公共查询SQL"""
-        if self.__name is None:
+        if self.__table__ is None:
             return None
 
         sa = ["SELECT"]
@@ -258,7 +264,8 @@ class QuerySet(object):
         fields = ','.join(self.__fields)
         sa.append("{}".format(fields if len(fields) > 0 else '*'))
 
-        sa.append("FROM {}".format(self.__name))
+        table_name = '' if self.prefix == '' else ' `{}`'.format(self.__table)
+        sa.append("FROM {}{}".format(self.__table__, table_name))
         if self.__alias != '':
             sa.append(self.__alias)
 
@@ -268,6 +275,7 @@ class QuerySet(object):
                 if isinstance(table, dict):
                     for key in table:
                         table, alias = key, table[key]
+                table = self.__complement_table_name(table)
                 sa.append("{} JOIN {} {} ON {}".format(item['type_'], table, alias, item['on']))
 
         sa.append(self.__com_where_sql())
@@ -367,7 +375,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__name, ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
         return self.__conn.execute(sql)[0]
 
     def insert_get_id(self, data):
@@ -382,7 +390,7 @@ class QuerySet(object):
         if len(fields) == 0 or len(values) == 0:
             return 0
 
-        sql = "INSERT INTO {}({}) VALUES({})".format(self.__name, ", ".join(fields), ", ".join(values))
+        sql = "INSERT INTO {}({}) VALUES({})".format(self.__table__, ", ".join(fields), ", ".join(values))
 
         # 执行
         count, ret, pk = self.__conn.execute_get_id(sql)
@@ -413,7 +421,7 @@ class QuerySet(object):
             return 0
 
         # 表名、更新的字段、限制条件
-        sql = "UPDATE {} SET {} {}".format(format_field(self.__name), ", ".join(fields), sql_where)
+        sql = "UPDATE {} SET {} {}".format(format_field(self.__table__), ", ".join(fields), sql_where)
         count, ret, _ = self.__conn.execute(sql)
         return count
 
@@ -425,7 +433,7 @@ class QuerySet(object):
         if len(sql_where.strip()) == 0:
             raise Exception("禁止不使用 where 删除数据")
 
-        sql = "DELETE FROM {} {}".format(self.__name, sql_where)
+        sql = "DELETE FROM {} {}".format(self.__table__, sql_where)
         count, result, _ = self.__conn.execute(sql)
         return count
 
@@ -439,9 +447,32 @@ class QuerySet(object):
         count, ret, _ = self.__conn.execute(sql)
         return ret
 
+    @staticmethod
+    def start_trans():
+        """开启事务"""
+        Connection.get_connect().start_trans()
+
+    @staticmethod
+    def commit():
+        """提交事务"""
+        Connection.get_connect().commit()
+
+    @staticmethod
+    def rollback():
+        """回滚事务"""
+        Connection.get_connect().rollback()
+
+    def __complement_table_name(self, name:str):
+        pre_len = len(self.prefix)
+        if pre_len > 0:
+            if name[:pre_len] != self.prefix:
+                name = self.prefix + name
+
+        return name
+
     def __get_column__(self, conv=None, table=None, full_name=False):
         """获取表字段"""
-        table = self.__name if table is None else table
+        table = self.__table__ if table is None else self.__complement_table_name(table)
         ck = "{}.{}_{}".format(self.__database, table, full_name)
         cache_data = self.__get_cache(ck)
         if cache_data is not None:
@@ -462,9 +493,9 @@ class QuerySet(object):
                                 'field_': item[0],
                                 'type': item[1], 'key': item[4]} for item in list_data])
 
-        if conv == str:
+        if conv is str:
             return ','.join([it['field'] for it in all_column])
-        if conv == list:
+        if conv is list:
             return [it['field'] for it in all_column]
 
         return all_column
@@ -511,3 +542,7 @@ class QuerySet(object):
         }
         self.__column_cache__[ck] = item
         return item['data']
+
+
+class Db(QuerySet):
+    """"""
